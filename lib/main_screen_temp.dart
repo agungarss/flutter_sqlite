@@ -47,7 +47,7 @@ class _MainScreenState extends State<MainScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 40,
                     backgroundImage: AssetImage('assets/images/asik.jpeg'),
                   ),
@@ -69,8 +69,8 @@ class _MainScreenState extends State<MainScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder:
-                        (context) => ProfileFragment(username: _loggedInUser!),
+                    builder: (context) =>
+                        ProfileFragment(username: _loggedInUser!),
                   ),
                 );
               },

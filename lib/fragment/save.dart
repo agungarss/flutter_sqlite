@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class SaveFragment extends StatelessWidget {
-  const SaveFragment({Key? key}) : super(key: key);
+  const SaveFragment({super.key});
 
   @override
   Widget build(BuildContext context) {

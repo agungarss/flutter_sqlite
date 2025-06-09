@@ -4,7 +4,7 @@ import '../models/item_model.dart';
 import '../fragment/detail.dart';
 
 class LikesFragment extends StatefulWidget {
-  const LikesFragment({Key? key}) : super(key: key);
+  const LikesFragment({super.key});
 
   @override
   State<LikesFragment> createState() => _LikesFragmentState();

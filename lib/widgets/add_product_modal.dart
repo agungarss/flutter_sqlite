@@ -7,10 +7,10 @@ class AddProductModal extends StatefulWidget {
   final Item? item; // Add this line to accept existing item for editing
 
   const AddProductModal({
-    Key? key,
+    super.key,
     required this.onProductAdded,
     this.item, // Add this parameter
-  }) : super(key: key);
+  });
 
   @override
   State<AddProductModal> createState() => _AddProductModalState();
