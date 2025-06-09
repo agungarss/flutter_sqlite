@@ -6,7 +6,13 @@ import '../fragment/detail.dart';
 
 class HomeFragment extends StatefulWidget {
   final String username;
-  const HomeFragment({super.key, required this.username});
+  final int userId;
+
+  const HomeFragment({
+    super.key,
+    required this.username,
+    required this.userId,
+  });
 
   @override
   State<HomeFragment> createState() => _HomeFragmentState();
@@ -14,6 +20,8 @@ class HomeFragment extends StatefulWidget {
 
 class _HomeFragmentState extends State<HomeFragment> {
   final DatabaseHelper _dbHelper = DatabaseHelper();
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   // Fungsi untuk me-refresh state dan membangun ulang UI
   Future<void> _refreshProducts() async {
@@ -23,49 +31,107 @@ class _HomeFragmentState extends State<HomeFragment> {
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder<List<Item>>(
-        future: _dbHelper.getItems(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.shopping_bag_outlined,
-                      size: 80, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text('No products available',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 16)),
-                ],
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search products...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
               ),
-            );
-          }
-
-          // Tampilan utama jika ada data
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.75,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.toLowerCase();
+                });
+              },
             ),
-            itemCount: snapshot.data!.length,
-            itemBuilder: (context, index) {
-              final item = snapshot.data![index];
-              return ProductCard(
-                item: item,
-                onRefresh: _refreshProducts,
-              );
-            },
-          );
-        },
+          ),
+          Expanded(
+            child: FutureBuilder<List<Item>>(
+              future: _dbHelper.getItems(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.shopping_bag_outlined,
+                            size: 80, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text('No products available',
+                            style: TextStyle(
+                                color: Colors.grey[600], fontSize: 16)),
+                      ],
+                    ),
+                  );
+                }
+
+                final filteredItems = snapshot.data!.where((item) {
+                  return item.name.toLowerCase().contains(_searchQuery) ||
+                      item.description.toLowerCase().contains(_searchQuery) ||
+                      item.category.toLowerCase().contains(_searchQuery);
+                }).toList();
+
+                if (filteredItems.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search_off,
+                            size: 80, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No products match your search',
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                // Tampilan utama jika ada data
+                return GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.75,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                  ),
+                  itemCount: filteredItems.length,
+                  itemBuilder: (context, index) {
+                    final item = filteredItems[index];
+                    return ProductCard(
+                      item: item,
+                      onRefresh: _refreshProducts,
+                      userId: widget.userId,
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
@@ -89,11 +155,13 @@ class _HomeFragmentState extends State<HomeFragment> {
 class ProductCard extends StatefulWidget {
   final Item item;
   final VoidCallback onRefresh;
+  final int userId; // Add this line
 
   const ProductCard({
     super.key,
     required this.item,
     required this.onRefresh,
+    required this.userId, // Add this line
   });
 
   @override
@@ -264,7 +332,10 @@ class _ProductCardState extends State<ProductCard> {
   void _showProductDetails(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => DetailScreen(item: widget.item),
+        builder: (context) => DetailScreen(
+          item: widget.item,
+          userId: widget.userId, // Now we can use the userId
+        ),
       ),
     );
   }

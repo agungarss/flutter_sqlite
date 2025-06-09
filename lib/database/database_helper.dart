@@ -26,16 +26,16 @@ class DatabaseHelper {
     final documentsDirectory = await getApplicationDocumentsDirectory();
     final path = join(documentsDirectory.path, 'items.db');
 
-    // Hapus database lama untuk memastikan struktur tabel yang benar
-    if (await File(path).exists()) {
-      print('Deleting existing database');
-      await deleteDatabase(path);
-    }
+    // Comment out or remove database deletion to preserve data
+    // if (await File(path).exists()) {
+    //   print('Deleting existing database');
+    //   await deleteDatabase(path);
+    // }
 
-    print('Creating new database');
+    print('Creating or opening database');
     return await openDatabase(
       path,
-      version: 3, // Naikkan versi database
+      version: 5, // Increase version number
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -80,17 +80,51 @@ class DatabaseHelper {
         UNIQUE(user_id, item_id)
       )
     ''');
+    // Add saves table
+    await db.execute('''
+      CREATE TABLE saves(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        item_id INTEGER NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        UNIQUE(user_id, item_id)
+      )
+    ''');
     print('Tables created successfully');
   }
 
   // Metode ini berjalan jika Anda menaikkan nomor `version` di `openDatabase`
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     print('Upgrading database from $oldVersion to $newVersion');
-    // Hapus tabel lama
-    await db.execute('DROP TABLE IF EXISTS users');
-    await db.execute('DROP TABLE IF EXISTS items');
-    // Buat tabel baru
-    await _onCreate(db, newVersion);
+
+    if (oldVersion < 5) {
+      // Only create tables if they don't exist
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS likes(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          item_id INTEGER NOT NULL,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          UNIQUE(user_id, item_id)
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS saves(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          item_id INTEGER NOT NULL,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          UNIQUE(user_id, item_id)
+        )
+      ''');
+    }
   }
 
   // --- Metode untuk Item ---
@@ -217,6 +251,47 @@ class DatabaseHelper {
     ''', [userId]);
 
     return likes.map((map) => Item.fromMap(map)).toList();
+  }
+
+  // Save/Unsave methods
+  Future<bool> isItemSaved(int userId, int itemId) async {
+    final db = await database;
+    final result = await db.query(
+      'saves',
+      where: 'user_id = ? AND item_id = ?',
+      whereArgs: [userId, itemId],
+    );
+    return result.isNotEmpty;
+  }
+
+  Future<void> toggleSave(int userId, int itemId) async {
+    final db = await database;
+    final isSaved = await isItemSaved(userId, itemId);
+
+    if (isSaved) {
+      await db.delete(
+        'saves',
+        where: 'user_id = ? AND item_id = ?',
+        whereArgs: [userId, itemId],
+      );
+    } else {
+      await db.insert('saves', {
+        'user_id': userId,
+        'item_id': itemId,
+      });
+    }
+  }
+
+  Future<List<Item>> getSavedItems(int userId) async {
+    final db = await database;
+    final saves = await db.rawQuery('''
+      SELECT items.* FROM items
+      INNER JOIN saves ON items.id = saves.item_id
+      WHERE saves.user_id = ?
+      ORDER BY saves.created_at DESC
+    ''', [userId]);
+
+    return saves.map((map) => Item.fromMap(map)).toList();
   }
 
   // Metode untuk menutup koneksi database (opsional)

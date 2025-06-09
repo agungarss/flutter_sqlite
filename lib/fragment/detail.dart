@@ -4,8 +4,13 @@ import '../database/database_helper.dart';
 
 class DetailScreen extends StatefulWidget {
   final Item item;
+  final int userId;
 
-  const DetailScreen({super.key, required this.item});
+  const DetailScreen({
+    super.key,
+    required this.item,
+    required this.userId,
+  });
 
   @override
   State<DetailScreen> createState() => _DetailScreenState();
@@ -14,19 +19,29 @@ class DetailScreen extends StatefulWidget {
 class _DetailScreenState extends State<DetailScreen> {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   bool _isLiked = false;
+  bool _isSaved = false;
 
   @override
   void initState() {
     super.initState();
     _checkLikeStatus();
+    _checkSaveStatus();
   }
 
   Future<void> _checkLikeStatus() async {
-    final isLiked = await _dbHelper.isItemLiked(
-        1, widget.item.id!); // TODO: Replace with actual user ID
+    final isLiked = await _dbHelper.isItemLiked(widget.userId, widget.item.id!);
     if (mounted) {
       setState(() {
         _isLiked = isLiked;
+      });
+    }
+  }
+
+  Future<void> _checkSaveStatus() async {
+    final isSaved = await _dbHelper.isItemSaved(widget.userId, widget.item.id!);
+    if (mounted) {
+      setState(() {
+        _isSaved = isSaved;
       });
     }
   }
@@ -43,9 +58,18 @@ class _DetailScreenState extends State<DetailScreen> {
               color: _isLiked ? Colors.red : null,
             ),
             onPressed: () async {
-              await _dbHelper.toggleLike(
-                  1, widget.item.id!); // TODO: Replace with actual user ID
+              await _dbHelper.toggleLike(widget.userId, widget.item.id!);
               await _checkLikeStatus();
+            },
+          ),
+          IconButton(
+            icon: Icon(
+              _isSaved ? Icons.bookmark : Icons.bookmark_border,
+              color: _isSaved ? Colors.blue : null,
+            ),
+            onPressed: () async {
+              await _dbHelper.toggleSave(widget.userId, widget.item.id!);
+              await _checkSaveStatus();
             },
           ),
         ],
@@ -123,19 +147,52 @@ class _DetailScreenState extends State<DetailScreen> {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            onPressed: widget.item.stock > 0
-                ? () {
-                    // TODO: Implement add to cart functionality
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Added to cart')),
-                    );
-                  }
-                : null,
-            child: const Text('Add to Cart'),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  onPressed: widget.item.stock > 0
+                      ? () async {
+                          await _dbHelper.toggleLike(
+                              widget.userId, widget.item.id!);
+                          await _checkLikeStatus();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text('Item bought and added to likes!'),
+                              ),
+                            );
+                          }
+                        }
+                      : null,
+                  child: const Text('Buy Now',
+                      style: TextStyle(color: Colors.white)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  onPressed: widget.item.stock > 0
+                      ? () {
+                          // TODO: Implement add to cart functionality
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Added to cart')),
+                          );
+                        }
+                      : null,
+                  child: const Text('Add to Cart'),
+                ),
+              ),
+            ],
           ),
         ),
       ),

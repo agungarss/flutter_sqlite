@@ -40,7 +40,10 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(
             builder: (context) => const MainScreen(),
             settings: RouteSettings(
-              arguments: user['username'],
+              arguments: {
+                'username': user['username'],
+                'userId': user['id'], // Add user ID
+              },
             ),
           ),
         );

@@ -15,23 +15,25 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
   late List<Widget> _fragments;
-
   String? _loggedInUser;
+  int? _userId; // Add this line
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final args = ModalRoute.of(context)!.settings.arguments;
-    if (args is String) {
-      _loggedInUser = args;
+    final args =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    if (args.containsKey('username')) {
+      _loggedInUser = args['username'];
+      _userId = args['userId']; // Add this line
     }
 
-    // PERBARUI DAFTAR FRAGMENT
+    // Update fragments with userId
     _fragments = [
-      HomeFragment(username: _loggedInUser ?? 'Guest'),
-      const LikesFragment(),
-      const SaveFragment(),
-      ProfileFragment(username: _loggedInUser ?? 'Guest'), // <-- TAMBAHKAN INI
+      HomeFragment(username: _loggedInUser ?? 'Guest', userId: _userId ?? 0),
+      LikesFragment(userId: _userId ?? 0),
+      SaveFragment(userId: _userId ?? 0),
+      ProfileFragment(username: _loggedInUser ?? 'Guest'),
     ];
   }
 
