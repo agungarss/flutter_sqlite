@@ -6,12 +6,10 @@ import 'package:path_provider/path_provider.dart';
 import '../models/item_model.dart';
 
 class DatabaseHelper {
-  // Pola Singleton untuk memastikan hanya ada satu instance DatabaseHelper
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
   DatabaseHelper._internal();
 
-  // Instance tunggal dari database
   static Database? _database;
 
   // Getter untuk database, akan menginisialisasi jika belum ada
@@ -21,27 +19,19 @@ class DatabaseHelper {
     return _database!;
   }
 
-  // Inisialisasi database (membuat atau membuka database yang ada)
   Future<Database> _initDatabase() async {
     final documentsDirectory = await getApplicationDocumentsDirectory();
     final path = join(documentsDirectory.path, 'items.db');
 
-    // Comment out or remove database deletion to preserve data
-    // if (await File(path).exists()) {
-    //   print('Deleting existing database');
-    //   await deleteDatabase(path);
-    // }
-
     print('Creating or opening database');
     return await openDatabase(
       path,
-      version: 5, // Increase version number
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
   }
 
-  // Metode ini hanya berjalan SEKALI saat database pertama kali dibuat
   Future<void> _onCreate(Database db, int version) async {
     print('Creating new tables');
     // Buat tabel users dengan kolom gender
@@ -56,7 +46,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Buat tabel items
     await db.execute('''
       CREATE TABLE items(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,7 +57,6 @@ class DatabaseHelper {
         category TEXT
       )
     ''');
-    // Create likes table
     await db.execute('''
       CREATE TABLE likes(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,7 +68,6 @@ class DatabaseHelper {
         UNIQUE(user_id, item_id)
       )
     ''');
-    // Add saves table
     await db.execute('''
       CREATE TABLE saves(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,12 +82,10 @@ class DatabaseHelper {
     print('Tables created successfully');
   }
 
-  // Metode ini berjalan jika Anda menaikkan nomor `version` di `openDatabase`
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     print('Upgrading database from $oldVersion to $newVersion');
 
     if (oldVersion < 5) {
-      // Only create tables if they don't exist
       await db.execute('''
         CREATE TABLE IF NOT EXISTS likes(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -143,7 +128,6 @@ class DatabaseHelper {
     });
   }
 
-  // Update item method dengan error handling
   Future<int> updateItem(Item item) async {
     final db = await database;
     try {
@@ -162,7 +146,6 @@ class DatabaseHelper {
     }
   }
 
-  // Delete item method dengan error handling
   Future<int> deleteItem(int id) async {
     final db = await database;
     try {
@@ -179,8 +162,6 @@ class DatabaseHelper {
     }
   }
 
-  // --- Metode untuk User ---
-  // Update insert user method dengan penanganan error yang lebih baik
   Future<int> insertUser(Map<String, dynamic> user) async {
     final db = await database;
     try {
